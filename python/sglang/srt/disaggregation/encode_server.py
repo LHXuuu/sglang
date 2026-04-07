@@ -124,7 +124,8 @@ def _convert(data):
 
 
 _mm_grid_attrs = {
-    Modality.IMAGE: ["image_grid_thw", "image_grid_hws"],
+    # Kimi K2.5 HF processor uses grid_thws (see base_processor.ATTR_NAME_TO_MODALITY).
+    Modality.IMAGE: ["image_grid_thw", "image_grid_hws", "grid_thws"],
     Modality.VIDEO: ["video_grid_thw"],
     Modality.AUDIO: ["audio_feature_lens_raw"],
 }
@@ -577,6 +578,18 @@ class MMEncoder:
         else:
             return int(grid[0] * grid[1] * grid[2])
 
+    def _kimi_k25_tokens_from_patch_grid(
+        self, grid: Union[torch.Tensor, List[int]]
+    ) -> int:
+        """MoonViT + tpool: output len is (h//mh)*(w//mw); temporal dim is pooled (not t*h*w/merge^2)."""
+        if isinstance(grid, torch.Tensor):
+            flat = grid.flatten()
+            _t, h, w = (int(x) for x in flat[:3].tolist())
+        else:
+            _t, h, w = int(grid[0]), int(grid[1]), int(grid[2])
+        merge_h, merge_w = self.model_config.hf_config.vision_config.merge_kernel_size
+        return (h * w) // (merge_h * merge_w)
+
     def get_num_tokens(
         self, grid: Union[torch.Tensor, List[int]], modality: Modality
     ) -> int:
@@ -585,6 +598,8 @@ class MMEncoder:
             input_length = self.get_num_patches(grid, modality)
             return self._get_feat_extract_output_lengths(input_length)
         else:
+            if self.model_type == "kimi_k25" and modality == Modality.IMAGE:
+                return self._kimi_k25_tokens_from_patch_grid(grid)
             merge_size = getattr(self.image_processor, "merge_size", 2)
             return self.get_num_patches(grid, modality) // (merge_size**2)
 
