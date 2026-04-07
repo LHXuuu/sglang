@@ -708,6 +708,7 @@ class KimiK25ForConditionalGeneration(nn.Module):
         # Create mm projector
         self.mm_projector = K2VLMultiModalProjector(config.vision_config)
 
+        self.language_model = None
         if not config.encoder_only:
             self.language_model = DeepseekV3ForCausalLM(
                 config.text_config,
@@ -719,7 +720,7 @@ class KimiK25ForConditionalGeneration(nn.Module):
 
         # Ensure that the dtype of the vision_tower and mm_projector matches that of the language_model.
         # This solves the dtype mismatch issue when using device_map="auto" and torch_dtype.
-        if hasattr(self, "language_model") and hasattr(self.language_model, "dtype"):
+        if self.language_model is not None and hasattr(self.language_model, "dtype"):
             target_dtype = self.language_model.dtype
             self.vision_tower = self.vision_tower.to(dtype=target_dtype)
             self.mm_projector = self.mm_projector.to(dtype=target_dtype)
@@ -757,23 +758,19 @@ class KimiK25ForConditionalGeneration(nn.Module):
 
     @property
     def start_layer(self) -> int:
-        return getattr(getattr(self, "language_model", None), "start_layer", 0)
+        return self.language_model.start_layer if self.language_model is not None else 0
 
     @property
     def end_layer(self) -> int:
-        language_model = getattr(self, "language_model", None)
-        end_layer = getattr(language_model, "end_layer", None)
-        if end_layer is not None:
-            return end_layer
+        if self.language_model is not None:
+            return self.language_model.end_layer
         text_config = getattr(self.config, "text_config", None)
         return int(getattr(text_config, "num_hidden_layers", 0))
 
     @property
     def routed_experts_weights_of_layer(self):
-        language_model = getattr(self, "language_model", None)
-        if language_model is None:
-            return {}
-        return language_model._routed_experts_weights_of_layer.value
+        return self.language_model._routed_experts_weights_of_layer.value \
+            if self.language_model is not None else {}
 
     def forward(
         self,
@@ -847,35 +844,32 @@ class KimiK25ForConditionalGeneration(nn.Module):
         self, layer_ids: Optional[List[int]] = None
     ) -> None:
         """Set the layers to capture for EAGLE3 speculative decoding."""
-        language_model = getattr(self, "language_model", None)
-        if language_model is None or not hasattr(
-            language_model, "set_eagle3_layers_to_capture"
+        if self.language_model is None or not hasattr(
+            self.language_model, "set_eagle3_layers_to_capture"
         ):
             raise AttributeError(
                 "language_model does not support EAGLE3 speculative decoding."
             )
 
-        language_model.set_eagle3_layers_to_capture(layer_ids)
+        self.language_model.set_eagle3_layers_to_capture(layer_ids)
 
     def get_embed_and_head(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """Get embedding and LM head weights for speculative decoding."""
-        language_model = getattr(self, "language_model", None)
-        if language_model is None or not hasattr(language_model, "get_embed_and_head"):
+        if self.language_model is None or not hasattr(self.language_model, "get_embed_and_head"):
             raise AttributeError(
                 "language_model does not support get_embed_and_head()."
             )
 
-        return language_model.get_embed_and_head()
+        return self.language_model.get_embed_and_head()
 
     def set_embed_and_head(self, embed: torch.Tensor, head: torch.Tensor) -> None:
         """Set embedding and LM head weights for speculative decoding."""
-        language_model = getattr(self, "language_model", None)
-        if language_model is None or not hasattr(language_model, "set_embed_and_head"):
+        if self.language_model is None or not hasattr(self.language_model, "set_embed_and_head"):
             raise AttributeError(
                 "language_model does not support set_embed_and_head()."
             )
 
-        language_model.set_embed_and_head(embed, head)
+        self.language_model.set_embed_and_head(embed, head)
 
 
 EntryClass = [KimiK25ForConditionalGeneration]
