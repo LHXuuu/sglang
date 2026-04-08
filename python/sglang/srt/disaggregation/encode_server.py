@@ -882,7 +882,7 @@ class MMEncoder:
 
         if not images:
             return images
-        # Disagg may supply a nested list; Kimi preprocess expects a flat list of medias.
+        # Disagg may supply a nested list; Kimi preprocess expects a flat list of media.
         if isinstance(images[0], (list, tuple)):
             images = [x for group in images for x in group]
         return [wrap_one(img) for img in images]
