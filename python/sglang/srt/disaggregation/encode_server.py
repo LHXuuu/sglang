@@ -872,12 +872,14 @@ class MMEncoder:
     def _normalize_kimi_k25_encoder_images(self, images):
         """KimiK25VisionProcessor.preprocess expects MediaInput dicts, not raw PIL."""
         from PIL import Image as PILImage
+
         def wrap_one(img):
             if isinstance(img, dict) and img.get("type") in ("image", "video_chunk"):
                 return img
             if isinstance(img, PILImage.Image):
                 return {"type": "image", "image": img}
             return img
+
         if not images:
             return images
         # Disagg may supply a nested list; Kimi preprocess expects a flat list of medias.

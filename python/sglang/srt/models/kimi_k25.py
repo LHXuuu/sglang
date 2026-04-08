@@ -714,7 +714,9 @@ class KimiK25ForConditionalGeneration(nn.Module):
                 config.text_config,
                 quant_config,
                 prefix=(
-                    "language_model" if isinstance(quant_config, ModelSlimConfig) else ""
+                    "language_model"
+                    if isinstance(quant_config, ModelSlimConfig)
+                    else ""
                 ),
             )
 
@@ -769,8 +771,11 @@ class KimiK25ForConditionalGeneration(nn.Module):
 
     @property
     def routed_experts_weights_of_layer(self):
-        return self.language_model._routed_experts_weights_of_layer.value \
-            if self.language_model is not None else {}
+        return (
+            self.language_model._routed_experts_weights_of_layer.value
+            if self.language_model is not None
+            else {}
+        )
 
     def forward(
         self,
@@ -855,7 +860,9 @@ class KimiK25ForConditionalGeneration(nn.Module):
 
     def get_embed_and_head(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """Get embedding and LM head weights for speculative decoding."""
-        if self.language_model is None or not hasattr(self.language_model, "get_embed_and_head"):
+        if self.language_model is None or not hasattr(
+            self.language_model, "get_embed_and_head"
+        ):
             raise AttributeError(
                 "language_model does not support get_embed_and_head()."
             )
@@ -864,7 +871,9 @@ class KimiK25ForConditionalGeneration(nn.Module):
 
     def set_embed_and_head(self, embed: torch.Tensor, head: torch.Tensor) -> None:
         """Set embedding and LM head weights for speculative decoding."""
-        if self.language_model is None or not hasattr(self.language_model, "set_embed_and_head"):
+        if self.language_model is None or not hasattr(
+            self.language_model, "set_embed_and_head"
+        ):
             raise AttributeError(
                 "language_model does not support set_embed_and_head()."
             )
