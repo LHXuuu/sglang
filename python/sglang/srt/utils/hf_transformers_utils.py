@@ -190,6 +190,64 @@ def _patch_text_config(parent_config: PretrainedConfig, text_config):
     return text_config
 
 
+def _ensure_processing_utils_compat() -> bool:
+    """Backfill removed private helpers used by old remote processor code."""
+    try:
+        import transformers.processing_utils as processing_utils
+    except Exception:
+        return False
+
+    if hasattr(processing_utils, "_validate_images_text_input_order"):
+        return False
+
+    def _validate_images_text_input_order(images, text):
+        # Keep argument order as-is. Older remote processors call this helper
+        # even when not relying on its validation logic.
+        return images, text
+
+    setattr(
+        processing_utils,
+        "_validate_images_text_input_order",
+        _validate_images_text_input_order,
+    )
+    return True
+
+
+def _load_auto_processor_with_compat(
+    tokenizer_name: str,
+    *args,
+    trust_remote_code: bool = False,
+    revision: Optional[str] = None,
+    **kwargs,
+):
+    """Load AutoProcessor, retrying once with compatibility patch if needed."""
+    try:
+        return AutoProcessor.from_pretrained(
+            tokenizer_name,
+            *args,
+            trust_remote_code=trust_remote_code,
+            revision=revision,
+            **kwargs,
+        )
+    except ImportError as e:
+        if "_validate_images_text_input_order" not in str(e):
+            raise
+        patched = _ensure_processing_utils_compat()
+        if patched:
+            logger.warning(
+                "Injected transformers.processing_utils._validate_images_text_input_order "
+                "for backward-compatible remote processor loading: %s",
+                tokenizer_name,
+            )
+        return AutoProcessor.from_pretrained(
+            tokenizer_name,
+            *args,
+            trust_remote_code=trust_remote_code,
+            revision=revision,
+            **kwargs,
+        )
+
+
 def get_hf_text_config(config: PretrainedConfig):
     """Get the "sub" config relevant to llm for multi modal models.
     No op for pure text models.
@@ -1288,7 +1346,7 @@ def get_processor(
                     **kwargs,
                 )
             else:
-                processor = AutoProcessor.from_pretrained(
+                processor = _load_auto_processor_with_compat(
                     tokenizer_name,
                     *args,
                     trust_remote_code=trust_remote_code,
@@ -1303,7 +1361,7 @@ def get_processor(
                 f"Processor {tokenizer_name} does not have a slow version. Automatically use fast version"
             )
             kwargs["use_fast"] = True
-            processor = AutoProcessor.from_pretrained(
+            processor = _load_auto_processor_with_compat(
                 tokenizer_name,
                 *args,
                 trust_remote_code=trust_remote_code,
@@ -1320,7 +1378,7 @@ def get_processor(
             )
             kwargs.pop("use_fast", None)
             kwargs.pop("_from_auto", None)
-            processor = AutoProcessor.from_pretrained(
+            processor = _load_auto_processor_with_compat(
                 tokenizer_name,
                 *args,
                 revision=revision,
