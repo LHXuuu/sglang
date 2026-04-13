@@ -23,7 +23,9 @@ class KimiGridMMDataMixin:
       - self._tokenizer (with .encode())
     """
 
-    def _num_image_tokens_from_grid(self, grid_thw: Union[torch.Tensor, np.ndarray, list, tuple]) -> int:
+    def _num_image_tokens_from_grid(
+        self, grid_thw: Union[torch.Tensor, np.ndarray, list, tuple]
+    ) -> int:
         """Compute Kimi-style image token count from 2D/3D grid metadata."""
         merge_h, merge_w = self.hf_config.vision_config.merge_kernel_size
 
