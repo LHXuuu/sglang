@@ -18,6 +18,7 @@ from sglang.srt.multimodal.processors.base_processor import (
 from sglang.srt.multimodal.processors.base_processor import (
     MultimodalSpecialTokens,
 )
+from sglang.srt.multimodal.processors.kimi_common import KimiGridMMDataMixin
 
 # ---------------------------------------------------------------------------
 # GPU image preprocessing utilities (resize, pad, normalize, patchify on CUDA)
@@ -327,7 +328,7 @@ class KimiGPUProcessorWrapper:
 
 
 # Compatible with KimiVLForConditionalGeneration
-class KimiK2_5VLImageProcessor(SGLangBaseProcessor):
+class KimiK2_5VLImageProcessor(KimiGridMMDataMixin, SGLangBaseProcessor):
     models = [KimiK25ForConditionalGeneration]
     gpu_image_decode = True  # nvJPEG for JPEG, PIL fallback for others
 

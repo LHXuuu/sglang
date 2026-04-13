@@ -9,10 +9,11 @@ from sglang.srt.multimodal.processors.base_processor import (
 from sglang.srt.multimodal.processors.base_processor import (
     MultimodalSpecialTokens,
 )
+from sglang.srt.multimodal.processors.kimi_common import KimiGridMMDataMixin
 
 
 # Compatible with KimiVLForConditionalGeneration
-class KimiVLImageProcessor(SGLangBaseProcessor):
+class KimiVLImageProcessor(KimiGridMMDataMixin, SGLangBaseProcessor):
     models = [KimiVLForConditionalGeneration]
     gpu_image_decode = False  # KimiVL HF processor does not support tensor inputs
 
