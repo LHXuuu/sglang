@@ -141,7 +141,10 @@ def _get_mm_grid_dim(mm_inputs, modality, model_type: Optional[str] = None):
     # Kimi K2.5 vision processor only emits `grid_thws`; prefer it over generic keys
     # so we never pick a mis-typed or stale `image_grid_hws` field from kwargs.
     attrs = _mm_grid_attrs[modality]
-    if (model_type or "").lower() in ["kimi_k25", "kimi_vl"] and modality == Modality.IMAGE:
+    if (model_type or "").lower() in [
+        "kimi_k25",
+        "kimi_vl",
+    ] and modality == Modality.IMAGE:
         attrs = ("grid_thws", "image_grid_thw", "image_grid_hws")
     for attr in attrs:
         if attr in mm_inputs and mm_inputs[attr] is not None:
@@ -583,9 +586,7 @@ class MMEncoder:
         else:
             return int(grid[0] * grid[1] * grid[2])
 
-    def _kimi_tokens_from_patch_grid(
-        self, grid: Union[torch.Tensor, List[int]]
-    ) -> int:
+    def _kimi_tokens_from_patch_grid(self, grid: Union[torch.Tensor, List[int]]) -> int:
         """MoonViT + tpool: output len is (h//mh)*(w//mw); temporal dim is pooled (not t*h*w/merge^2)."""
         if isinstance(grid, torch.Tensor):
             flat = grid.flatten()
@@ -603,7 +604,10 @@ class MMEncoder:
             input_length = self.get_num_patches(grid, modality)
             return self._get_feat_extract_output_lengths(input_length)
         else:
-            if self.model_type in ["kimi_k25", "kimi_vl"] and modality == Modality.IMAGE:
+            if (
+                self.model_type in ["kimi_k25", "kimi_vl"]
+                and modality == Modality.IMAGE
+            ):
                 return self._kimi_tokens_from_patch_grid(grid)
             merge_size = getattr(self.image_processor, "merge_size", 2)
             return self.get_num_patches(grid, modality) // (merge_size**2)
