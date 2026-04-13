@@ -9,7 +9,6 @@ import torch.nn.functional as F
 from PIL import Image
 
 from sglang.srt.managers.schedule_batch import (
-    MultimodalDataItem,
     MultimodalProcessorOutput,
 )
 from sglang.srt.models.kimi_k25 import KimiK25ForConditionalGeneration
